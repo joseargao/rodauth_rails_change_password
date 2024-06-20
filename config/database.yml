@@ -1,0 +1,18 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: 5
+
+development:
+  <<: *default
+  database: password_management_development
+
+test:
+  <<: *default
+  database: password_management_test
+
+production:
+  <<: *default
+  database: password_management_production
+  username: password_management
+  password: <%= ENV['PASSWORD_MANAGEMENT_DATABASE_PASSWORD'] %>
