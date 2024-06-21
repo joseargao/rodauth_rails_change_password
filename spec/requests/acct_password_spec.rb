@@ -3,29 +3,12 @@
 require 'rails_helper'
 
 RSpec.describe 'Account Tests', type: :request do
-  let(:credentials) do
-    {
-      user: {
-        email: 'user@example.com',
-        password: 'userpassword',
-        name: 'test user',
-        'password-confirm': 'userpassword'
-      },
-      admin: {
-        email: 'admin@example.com',
-        password: 'adminpassword',
-        name: 'test admin',
-        'password-confirm': 'adminpassword'
-      }
-    }
-  end
-
   def get_credential(role, param)
-    credentials[role][param.to_sym]
+    @credentials[role][param.to_sym]
   end
 
   def authorise(role)
-    post '/login', params: credentials[role], as: :json
+    post '/login', params: @credentials[role], as: :json
     # pp "LOGIN #{role.to_s.upcase}: #{JSON.parse(response.body)}"
   end
 
@@ -50,13 +33,30 @@ RSpec.describe 'Account Tests', type: :request do
     end
   end
 
-  before do
-    create_account(:user)
-    @user_account = Account.find_by(email: get_credential(:user, :email))
+  def modify_account_password_change_time(email, new_time)
+    acct_id = Account.find_by(email:).id
+    change_time_entry = AccountPasswordChangeTime.find_by(account_id: acct_id)
+    change_time_entry.update(changed_at: new_time)
   end
 
-  after(:each) do
-    Timecop.return
+  before(:all) do
+    @credentials = {
+      user: {
+        email: 'user@example.com',
+        password: 'userpassword',
+        name: 'test user',
+        'password-confirm': 'userpassword'
+      },
+      admin: {
+        email: 'admin@example.com',
+        password: 'adminpassword',
+        name: 'test admin',
+        'password-confirm': 'adminpassword'
+      }
+    }
+
+    create_account(:user)
+    @user_account = Account.find_by(email: get_credential(:user, :email))
   end
 
   describe 'Password expiry', type: :feature do
@@ -66,11 +66,13 @@ RSpec.describe 'Account Tests', type: :request do
 
       # display_accounts_password_change_times
 
-      Timecop.travel(11.days.from_now)
+      modify_account_password_change_time(@credentials[:user][:email], 11.days.ago)
 
       authorise(:user)
       expect(response).to have_http_status(:bad_request)
+    end
 
+    it 'refreshes after the password is changed' do
       password = get_credential(:user, :password)
       new_password = 'newpassword'
       post '/change-password',
@@ -83,7 +85,7 @@ RSpec.describe 'Account Tests', type: :request do
 
       # display_accounts_password_change_times
 
-      credentials[:user][:password] = new_password
+      @credentials[:user][:password] = new_password
       authorise(:user)
       expect(response).to have_http_status(:ok)
     end

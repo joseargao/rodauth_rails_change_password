@@ -27,14 +27,5 @@ class RodauthMain < Rodauth::Rails::Auth
     db Sequel.postgres(extensions: :activerecord_connection, keep_reference: false)
     convert_token_id_to_integer? { Account.columns_hash['id'].type == :integer }
     rails_controller { RodauthController }
-
-    # Uncomment this to manually update the changed_at column when change-password is used
-    # after_change_password do
-    #   user_id = account_from_session[:id]
-    #   unless user_id.nil?
-    #     password_change_record = AccountPasswordChangeTime.find_by(account_id: user_id)
-    #     password_change_record&.update(changed_at: Time.now)
-    #   end
-    # end
   end
 end
